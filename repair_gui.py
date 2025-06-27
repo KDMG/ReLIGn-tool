@@ -5,6 +5,7 @@ import re
 from collections import deque, defaultdict
 from LigEditor import is_dark_mode
 
+
 from PySide6.QtGui import QIcon, QPixmap, QColor, QGuiApplication
 from PySide6.QtWidgets import (
     QApplication, QWidget, QLabel, QLineEdit, QPushButton, QFileDialog,
@@ -20,21 +21,7 @@ from pm4py.objects.petri_net.importer import importer as pnml_importer
 from LigEditor import LigEditor
 from PySide6.QtCore import QObject, Signal, QRunnable, Slot, QThreadPool
 from utils import compute_precision
-
-
-LIGHT_PALETTE = {
-    "node_fill":  "#ECEFF1",
-    "node_edge":  "#263238",
-    "edge":       "#455A64",
-    "label":      "#000000",
-}
-
-DARK_PALETTE = {
-    "node_fill":  "#37474F",
-    "node_edge":  "#ECEFF1",
-    "edge":       "#CFD8DC",
-    "label":      "#ECEFF1",
-}
+from ProcessRepairing.scripts.Repairing import CompilationError
 
 class BigWorker(QRunnable):
     def __init__(self, log_path, model_path, db_name, out_g_file,
@@ -203,6 +190,8 @@ class RepairWorker(QRunnable):
             self.signals.error.emit("The behavior represented by your LIG is already represented by the model")
         except ValueError:
             self.signals.error.emit("The behavior represented by your LIG is already represented by the model")
+        except CompilationError:
+            self.signals.error.emit("You need to recompile the subdue files in the subdue_files folder")
         except Exception as e:
             self.signals.error.emit(e)
         finally:
@@ -511,7 +500,6 @@ class RepairToolGUI(QWidget):
             return
 
         path = os.path.join("experiments", dataset, lig_folder, "repaired_petriNet.jpg")
-        print(path)
         if os.path.exists(path):
             QDesktopServices.openUrl(QUrl.fromLocalFile(os.path.abspath(path)))
         else:
@@ -888,6 +876,9 @@ class RepairToolGUI(QWidget):
         except ValueError:
             self.log(f"Error: The behavior represented by your LIG is already represented by the model")
             self.show_error("The behavior represented by your LIG is already represented by the model")
+        except CompilationError:
+            self.log(f"Error: You need to recompile the subdue files in the subdue_files folder")
+            self.show_error("You need to recompile the subdue files in the subdue_files folder")
         except Exception as e:
             self.log(f"Error")
             self.show_error(e)
@@ -904,6 +895,7 @@ class RepairToolGUI(QWidget):
         self.eval_dataset_selector.setCurrentText(lig_folder)
         self.update_lig_selector(lig_folder)
         self.lig_selector.setCurrentText(os.path.basename(save_path))
+
         self.display_lig_results(lig_folder)
         self.tabs.setCurrentWidget(self.eval_tab)
 
