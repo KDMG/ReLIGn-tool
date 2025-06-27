@@ -18,6 +18,9 @@ To run our application you need to have installed:
   
 * A set of packages that you can configure inside an environment by using the [requirements.txt](https://github.com/KDMG/ReLIGn-tool/edit/main/requirements.txt) file
 
+* *Optional*: You may need to recompile the files located in the [`subdue_files`](https://github.com/KDMG/ReLIGn-tool/tree/main/subdue_files) directory by following the instructions at this [link](https://github.com/gromgull/subdue/tree/master).
+
+
 ### Reproduce results
 To run our program copy and paste the following command in your terminal:
 ```
