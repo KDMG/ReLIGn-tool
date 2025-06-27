@@ -29,7 +29,7 @@ cd ReLIGn-tool
 
 python repair_gui.py
 ```
-In the [data](https://github.com/KDMG/ReLIGn-tool) folder you can find some data to test the tool.
+In the [data](https://github.com/KDMG/ReLIGn-tool/data) folder you can find some data to test the tool.
 
 ### Contributors
 | Contributor name | Contacts |
