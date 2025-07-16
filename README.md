@@ -5,7 +5,7 @@
 
 
 This project provides a tool for process Model Repairing supported by Local Instance Graphs, following the approach described in the article [*Model repair supported by frequent anomalous local instance graphs*](https://www.google.com/search?client=safari&rls=en&q=model+repair+supported+by&ie=UTF-8&oe=UTF-8).
-A demonstration of the tool is available at this [link](https://youtu.be/cg-GX0eXVbo) 
+A demonstration of the tool is available at this [link](https://www.youtube.com/watch?v=aWa0YlJp1wA) 
 
 
 ### Requirements
@@ -29,7 +29,7 @@ cd ReLIGn-tool
 
 python repair_gui.py
 ```
-In the [`data`](https://github.com/KDMG/ReLIGn-tool/data) folder you can find some data to test the tool.
+In the [`data`](https://github.com/KDMG/ReLIGn-tool/tree/main/data) folder you can find some data to test the tool.
 
 ### Contributors
 | Contributor name | Contacts |
