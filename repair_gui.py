@@ -3,14 +3,20 @@ import sys
 import os
 import re
 from collections import deque, defaultdict
+import graphviz as gv
+
+import networkx as nx
+from networkx.classes import DiGraph
+
 from LigEditor import is_dark_mode
 
+# TODO: sistemare visualizzazione LIG
 
 from PySide6.QtGui import QIcon, QPixmap, QColor, QGuiApplication
 from PySide6.QtWidgets import (
     QApplication, QWidget, QLabel, QLineEdit, QPushButton, QFileDialog,
     QVBoxLayout, QHBoxLayout, QTextEdit, QMessageBox, QCheckBox, QGroupBox,
-    QSizePolicy, QToolButton, QComboBox, QDialog, QTabWidget
+    QSizePolicy, QToolButton, QComboBox, QDialog, QTabWidget, QScrollArea
 )
 from PySide6.QtCore import Qt, QUrl, QEvent
 from PySide6.QtGui import QDesktopServices
@@ -22,6 +28,10 @@ from LigEditor import LigEditor
 from PySide6.QtCore import QObject, Signal, QRunnable, Slot, QThreadPool
 from utils import compute_precision
 from ProcessRepairing.scripts.Repairing import CompilationError
+
+import tempfile, graphviz
+from PySide6.QtSvg import QSvgRenderer
+from PySide6.QtGui import QPainter
 
 class BigWorker(QRunnable):
     def __init__(self, log_path, model_path, db_name, out_g_file,
@@ -71,7 +81,39 @@ class AdaptiveGraphLabel(QLabel):
 
         pm = self._pixmap_from_g(self._g_path, w, h)
         if pm:
-            super().setPixmap(pm)
+            base_name = self._g_path.rsplit('.', 1)[0]  # es.: ".../lig"
+            nx.drawing.nx_pydot.write_dot(pm, base_name)  # => file "lig"
+            DARK = is_dark_mode()
+
+            with open(base_name, "r", encoding="utf-8") as f:
+                lines = f.readlines()
+
+            for i, line in enumerate(lines):
+                if "{" in line:
+                    insert_idx = i + 1
+                    break
+            else:
+                insert_idx = 1
+
+            attrs = [
+                'bgcolor="transparent"',
+                'rankdir=LR'
+            ]
+
+            if DARK:
+                attrs += [
+                    'node [style="filled", '
+                    'fillcolor="#F4F4F4", color="#404040", fontcolor="#000000"]',
+                    'edge [color="#F4F4F4"]'
+                ]
+            attr_block = "  " + ";\n  ".join(attrs) + ";\n"
+            lines.insert(insert_idx, attr_block)
+
+            with open(base_name, "w", encoding="utf-8") as f:
+                f.writelines(lines)
+            png_path = gv.render("dot", "png", base_name)
+            pix = QPixmap(png_path)
+            super().setPixmap(pix)
         else:
             self.setText("No graph available")
 
@@ -82,79 +124,21 @@ class AdaptiveGraphLabel(QLabel):
         return super().event(ev)
 
     @staticmethod
-    def _pixmap_from_g(g_path: str, canvas_w: int, canvas_h: int):
+    def _pixmap_from_g(g_path: str, canvas_w: int, canvas_h: int) -> DiGraph:
 
-        DARK = is_dark_mode()
-        FG = '#FFFFFF' if DARK else '#000000'
-        font_color = '#FFFFFF' if not DARK else '#000000'
-
-
-        import tempfile, networkx as nx, matplotlib.pyplot as plt, os, math
         if not g_path or not os.path.exists(g_path):
             return None
+
         G = nx.DiGraph()
-        with open(g_path, "r", encoding="utf-8") as f:
-            for l in f:
-                if l.startswith("v "):
-                    _, vid, lab = l.split(maxsplit=2)
+        with open(g_path, encoding='utf-8') as f:
+            for line in f:
+                if line.startswith('v '):
+                    _, vid, lab = line.split(maxsplit=2)
                     G.add_node(int(vid), label=lab.strip())
-                elif l.startswith(("e ", "d ")):
-                    _, s, d, lab = l.split(maxsplit=3)
-                    G.add_edge(int(s), int(d), label=lab.strip())
-
-        if G.number_of_nodes() == 0:
-            return None
-
-        try:
-            layers = list(nx.topological_generations(G))
-            pos = {}
-            for x, layer in enumerate(layers):
-                step_y = 1 / (len(layer) + 1)
-                for i, node in enumerate(layer, start=1):
-                    pos[node] = (x, 1 - i * step_y)
-            max_x = max(p[0] for p in pos.values())
-            for k, (x, y) in pos.items():
-                pos[k] = (x / (max_x if max_x else 1), y)
-        except nx.NetworkXUnfeasible:
-            pos = nx.kamada_kawai_layout(G)
-            xs, ys = zip(*pos.values())
-            min_x, max_x = min(xs), max(xs)
-            min_y, max_y = min(ys), max(ys)
-            for k, (x, y) in pos.items():
-                pos[k] = ((x - min_x) / (max_x - min_x or 1),
-                          (y - min_y) / (max_y - min_y or 1))
-
-
-        plt.figure(figsize=((canvas_w-50) / 100, (canvas_h) / 100), dpi=100)
-        nx.draw_networkx_nodes(G, pos, node_size=400,
-                               node_color='#FFFFFF', edgecolors=FG)
-        labels = {n: d['label'] for n, d in G.nodes(data=True)}
-        nx.draw_networkx_labels(
-            G,
-            pos,
-            labels,
-            font_size=5,
-            font_color=FG,
-            verticalalignment='center',
-            horizontalalignment='center',
-            bbox=dict(boxstyle="round,pad=0.2", fc="white", ec="none", alpha=0.8)
-        )
-
-        nx.draw_networkx_edges(
-            G, pos,
-            arrows=True,
-            arrowstyle='-|>',
-            arrowsize=10,
-            edge_color=FG,
-            width=1,
-            connectionstyle="arc3,rad=0")
-        plt.axis('off')
-        tmp = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
-        plt.savefig(tmp.name, bbox_inches='tight', dpi=120, transparent=True)
-        plt.close()
-        return QPixmap(tmp.name)
-
-
+                elif line.startswith(('e ', 'd ')):
+                    _, s, d, lab = line.split(maxsplit=3)
+                    G.add_edge(int(s), int(d))
+        return G
 
 
 class WorkerSignals(QObject):
@@ -471,9 +455,13 @@ class RepairToolGUI(QWidget):
         layout.addWidget(lig_label)
 
         self.graph_label = AdaptiveGraphLabel()
-        self.graph_label.setMinimumSize(700, 240)
-        layout.addWidget(self.graph_label)
+        self.graph_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
+        scroll = QScrollArea()
+        scroll.setWidget(self.graph_label)
+        scroll.setWidgetResizable(True)
+
+        layout.addWidget(scroll)
 
         self.btn_view_net = QPushButton("View repaired net")
         self.btn_export_net = QPushButton("Export repaired net")
@@ -612,7 +600,7 @@ class RepairToolGUI(QWidget):
         else:
             return
         if dataset != '' and not dataset.__contains__('--'):
-            eval_original = os.path.join("experiments", dataset, "output__evaluation.txt")
+            eval_original = os.path.join("experiments", dataset, f"output_{dataset}_evaluation.txt")
             if os.path.exists(eval_original):
                 html_org = self._parse_metrics_file(eval_original or '')
                 self.metrics_text_original.setHtml(html_org)
@@ -794,13 +782,31 @@ class RepairToolGUI(QWidget):
 
         self.log("Starting repair process...")
 
+        input_data = {
+            'net': self.input_net.get_path(),
+            'log': self.input_log.get_path(),
+            'LIG': self.input_lig.get_path(),
+            'igs': self.input_igs.get_path() or None,
+            'fast_mode': self.fast_mode.isChecked()
+        }
+
+        xes_base = os.path.splitext(os.path.basename(self.input_log.get_path()))[0]
+        folder_name = f"{xes_base}"
+        folder_path = os.path.join('experiments', folder_name)
+
+        try:
+            self.log("Creating experiment folder...")
+            folder_path, base_name = create_experiment_folder_from_xes(
+                'experiments', input_data['log'], input_data['net'],
+                input_data['igs'], input_data['LIG']
+            )
+        except Exception as e:
+            self.show_error(f"Creating experiment folder failed: {e}")
+
         igs_path = self.input_igs.get_path().strip()
         if not igs_path:
-            xes_base = os.path.splitext(os.path.basename(self.input_log.get_path()))[0]
-            folder_name = f"{xes_base}"
-            folder_path = os.path.join('experiments', folder_name)
             big_path = os.path.join(folder_path, "big")
-            out_g_file = os.path.join(big_path, xes_base + '.g')
+            out_g_file = os.path.join(folder_path, xes_base + '.g')
 
             if not os.path.exists(big_path):
                 os.makedirs(big_path)
@@ -810,9 +816,9 @@ class RepairToolGUI(QWidget):
             try:
                 # calcola l'allineamento solo se serve
                 if 'alignment.csv' not in os.listdir(big_path):
-                    compute_precision(self.input_log.get_path(), self.input_net.get_path())
-                    shutil.copyfile('alignment.csv', os.path.join(big_path, 'alignment.csv'))
-                    os.remove('alignment.csv')
+                    compute_precision(os.path.join(folder_path, base_name+'.xes'),
+                                      os.path.join(folder_path, base_name+'_petriNet.pnml'))
+                    shutil.copyfile(os.path.join(folder_path, 'alignment.csv'), os.path.join(big_path, 'alignment.csv'))
 
                 # avvia comunque BIG, sempre
                 worker = BigWorker(
@@ -835,6 +841,7 @@ class RepairToolGUI(QWidget):
                     shutil.rmtree(folder_path)
                 return
 
+        """
         input_data = {
             'net': self.input_net.get_path(),
             'log': self.input_log.get_path(),
@@ -842,13 +849,16 @@ class RepairToolGUI(QWidget):
             'igs': self.input_igs.get_path() or None,
             'fast_mode': self.fast_mode.isChecked()
         }
+        """
 
         try:
+            """
             self.log("Creating experiment folder...")
             folder_path, base_name = create_experiment_folder_from_xes(
                 'experiments', input_data['log'], input_data['net'],
                 input_data['igs'], input_data['LIG']
             )
+            """
 
             dataset_name = os.path.basename(os.path.dirname(folder_path))
 
@@ -861,8 +871,6 @@ class RepairToolGUI(QWidget):
 
             worker.signals.finished.connect(self.on_repair_finished)
             worker.signals.error.connect(self.on_repair_error)
-
-
 
             self.threadpool.start(worker)
             self.refresh_all_dataset_selectors()

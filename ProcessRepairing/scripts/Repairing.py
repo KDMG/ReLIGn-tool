@@ -32,12 +32,18 @@ import random
 import argparse
 from pm4py.objects.petri_net.exporter import exporter as pnml_exporter
 from pm4py.objects.log.exporter.xes import exporter as xes_exporter
+from networkx.algorithms import similarity as sim
+import networkx as nx
+from networkx.algorithms import isomorphism as iso
+
 
 """ Function to split the file containing subs. It returns a list
 INPUT: -pathubfile: path to the file (e.g. *_new_patterns_filtered.subs)
 RETURN: -a: list of sub files
 """
 
+class CompilationError(Exception):
+    pass
 
 def split_subgraph(pathsubfile):
     var_lettura = open(pathsubfile, "r").readlines()
@@ -303,6 +309,44 @@ INPUT: -sub_number: the number of a sub (it will be used to get the IG from the 
 RETURN: the output of the sgiso tool
 """
 
+def parse_graph(text):
+    G = nx.DiGraph()
+    for line in text.splitlines():
+        if not line.strip():
+            continue
+        t, *rest = line.split(maxsplit=3)
+        if t == "v":                           # nodo
+            idx, label = rest
+            G.add_node(int(idx), label=label)
+        elif t in ("e", "d"):                  # arco
+            u, v, label = rest
+            u, v = int(u), int(v)
+            G.add_edge(u, v, label=label)
+    return G
+
+
+def sgiso_style_output(G_pat: nx.DiGraph, matches):
+    out = []
+    n_found = len(matches)
+
+    if n_found == 0:
+        return [['Found', '0', 'instances.']]
+
+    # token fissi per tutti
+    node_tokens = []
+    for n in sorted(G_pat.nodes()):
+        node_tokens += ['v', str(n), G_pat.nodes[n]['label']]
+
+    edge_tokens = []
+    for u, v in sorted(G_pat.edges()):
+        edge_tokens += ['d', str(u), str(v), G_pat.edges[u, v]['label']]
+
+    for i, _ in enumerate(matches, start=1):
+        tokens = ['Instance', f'{i}:'] + node_tokens + edge_tokens \
+                 + ['Found', str(n_found), 'instances.']
+        out.append(tokens)
+    return out
+
 
 def find_instances(graph, pattern):
     subgraph = sub_graph(os.path.join(pattern, "subelements.txt"))
@@ -312,13 +356,32 @@ def find_instances(graph, pattern):
     write_subfile(subgraph, pattern, 'graphsub')
     write_subfile(graph, pattern, 'complete_graph')
 
-    out = subprocess.Popen([os.path.join('subdue_files', 'sgiso'),
+    """
+    try:
+        out = subprocess.Popen([os.path.join('subdue_files', 'sgiso'),
                             os.path.join(pattern, 'graphsub.g'),
                             os.path.join(pattern, 'complete_graph.g')],
                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    except:
+        raise CompilationError
     stdout, stderr = out.communicate()
     sub = stdout.decode("utf-8")
     sub2 = sub.split()
+    """
+
+    g1_txt = open(os.path.join(pattern, 'complete_graph.g')).read()
+    g2_txt = open(os.path.join(pattern, 'graphsub.g')).read()
+
+    G1 = parse_graph(g1_txt)
+    G2 = parse_graph(g2_txt)
+
+    node_match = iso.categorical_node_match('label', None)
+    edge_match = iso.categorical_edge_match('label', None)
+
+    GM = iso.MultiDiGraphMatcher(G1, G2, node_match=node_match, edge_match=edge_match)
+
+    matches = list(GM.subgraph_isomorphisms_iter())
+    sub2 = sgiso_style_output(G2, matches)[0]
 
     return sub2
 
@@ -544,7 +607,7 @@ def search_alignment(pattern, dict_trace, graph, dataset):
         if line.startswith("Index"):
             break
     if i != 0:
-        with open(os.path.join(pattern + "alignment.csv"), "w") as file:
+        with open(os.path.join(pattern, "alignment.csv"), "w") as file:
             file.writelines(lines[i:])
     # df = csv_importer.import_dataframe_from_path(pattern + "alignment.csv", sep=",") #pm4py-1.5.0.1
     df = pd.read_csv(os.path.join(pattern, "alignment.csv"), sep=",")
@@ -1473,31 +1536,69 @@ INPUT: -graph1: name of the first graph
 RETURN: -float(sub2[3]): Matching Cost
 """
 
-
 def graph_matching(pattern, graph1, graph2, sub_number):
     secondgraph = graph_sub(pattern, graph2, sub_number)
     write_graphfile(secondgraph, "2", pattern)
 
+
     if graph1 == 'sub':
-        out = subprocess.Popen([os.path.join('subdue_files','gm'),
+        """
+        try:
+            out = subprocess.Popen([os.path.join('subdue_files','gm'),
                                 os.path.join(pattern, 'graphsub.g'),
                                 os.path.join(pattern, 'graph2.g')],
                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        except:
+            CompilationError
         stdout, stderr = out.communicate()
         sub = stdout.decode("utf-8")
         sub2 = sub.split()
+        """
+
+        g1_txt = open(os.path.join(pattern, 'graphsub.g')).read()
+        g2_txt = open(os.path.join(pattern, 'graph2.g')).read()
+
+        G1 = parse_graph(g1_txt)
+        G2 = parse_graph(g2_txt)
+
+        node_match = iso.categorical_node_match('label', None)
+        edge_match = iso.categorical_edge_match('label', None)
+        ged = sim.graph_edit_distance(
+            G1, G2,
+            node_match=node_match,
+            edge_match=edge_match)
     else:
         firstgraph = graph_sub(pattern, graph1, sub_number)
         write_graphfile(firstgraph, "1", pattern)
-        out = subprocess.Popen([os.path.join(pattern, 'gm'),
+
+        """
+        try:
+            out = subprocess.Popen([os.path.join(pattern, 'gm'),
                                 os.path.join(pattern, 'graph1.g'),
                                 os.path.join(pattern, 'graph2.g')],
                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        except:
+            CompilationError
+                
         stdout, stderr = out.communicate()
         sub = stdout.decode("utf-8")
         sub2 = sub.split()
+        """
 
-    return float(sub2[3])
+        g1_txt = open(os.path.join(pattern, 'graph1.g')).read()
+        g2_txt = open(os.path.join(pattern, 'graph2.g')).read()
+
+        G1 = parse_graph(g1_txt)
+        G2 = parse_graph(g2_txt)
+
+        node_match = iso.categorical_node_match('label', None)
+        edge_match = iso.categorical_edge_match('label', None)
+        ged = sim.graph_edit_distance(
+            G1, G2,
+            node_match=node_match,
+            edge_match=edge_match)
+
+    return ged
 
 
 """ The functions return the graph with the smallest matching cost
@@ -1642,9 +1743,11 @@ def main(input_data, pattern, dataset, numsub, namesub):
     #print("\nValutazione rete sub_" + str(x) + ":")
     # evaluation of the log composed by only traces in which the sub occurs
     # evaluation on the complete log
-    if os.path.exists(os.path.join(pattern, 'output__evaluation.txt')):
-        if not check_plaintext(os.path.join(pattern, 'output__evaluation.txt')):
+    if os.path.exists(os.path.join(pattern, 'output_'+dataset+'_evaluation.txt')):
+        if not check_plaintext(os.path.join(pattern, 'output_'+dataset+'_evaluation.txt')):
                 valutazione_rete_logcompleto(log, net, initial_marking, final_marking, 'original', pattern)
+    else:
+        valutazione_rete_logcompleto(log, net, initial_marking, final_marking, 'original', pattern)
 
     # visualization of the net
     # visualizza_rete_performance(log, net, initial_marking, final_marking, [])

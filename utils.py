@@ -88,7 +88,6 @@ def run_repairing(input_data, folder_path, base_name):
         raise e
 
 
-
 def run_cmd_stream(cmd: list[str], logger, on_finish=None) -> threading.Thread:
 
     def _worker():
@@ -169,9 +168,6 @@ def call_big(log_path, model_path, db_name, out_g_file,
     run_cmd_stream_sync(rules_cmd, logger)
 
     return out_g_file
-
-
-
 
 
 def compute_precision(net_path, log_path):
