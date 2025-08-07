@@ -174,4 +174,3 @@ def compute_precision(net_path, log_path):
     big = 'BIGfiles'
     rules_cmd = ['java', '-jar', join(big, 'ComputePrecision.jar'), net_path, log_path]
     subprocess.call(rules_cmd)
-
