@@ -79,13 +79,13 @@ class AdaptiveGraphLabel(QLabel):
     def _redraw(self):
         w, h = max(self.width(), 1), max(self.height(), 1)
 
-        pm = self._pixmap_from_g(self._g_path, w, h)
+        pm = self._graph_from_gfile(self._g_path, w, h)
         if pm:
-            base_name = self._g_path.rsplit('.', 1)[0]  # es.: ".../lig"
-            nx.drawing.nx_pydot.write_dot(pm, base_name)  # => file "lig"
+            base_name = self._g_path.rsplit('.', 1)[0]
+            nx.drawing.nx_pydot.write_dot(pm, base_name+'.dot')
             DARK = is_dark_mode()
 
-            with open(base_name, "r", encoding="utf-8") as f:
+            with open(base_name+'.dot', "r", encoding="utf-8") as f:
                 lines = f.readlines()
 
             for i, line in enumerate(lines):
@@ -109,9 +109,9 @@ class AdaptiveGraphLabel(QLabel):
             attr_block = "  " + ";\n  ".join(attrs) + ";\n"
             lines.insert(insert_idx, attr_block)
 
-            with open(base_name, "w", encoding="utf-8") as f:
+            with open(base_name+'.dot', "w", encoding="utf-8") as f:
                 f.writelines(lines)
-            png_path = gv.render("dot", "png", base_name)
+            png_path = gv.render("dot", "png", base_name+'.dot')
             pix = QPixmap(png_path)
             super().setPixmap(pix)
         else:
@@ -124,7 +124,7 @@ class AdaptiveGraphLabel(QLabel):
         return super().event(ev)
 
     @staticmethod
-    def _pixmap_from_g(g_path: str, canvas_w: int, canvas_h: int) -> DiGraph:
+    def _graph_from_gfile(g_path: str, canvas_w: int, canvas_h: int) -> DiGraph:
 
         if not g_path or not os.path.exists(g_path):
             return None
@@ -143,7 +143,7 @@ class AdaptiveGraphLabel(QLabel):
 
 class WorkerSignals(QObject):
     finished = Signal(str)
-    error    = Signal(Exception)
+    error    = Signal(object)
 
 class RepairWorker(QRunnable):
     def __init__(self, input_data, folder_path, base_name, logger):
@@ -496,13 +496,23 @@ class RepairToolGUI(QWidget):
     def refresh_all_dataset_selectors(self):
         folders = self.get_experiment_folders()
 
-
         self.dataset_selector.blockSignals(True)
         self.dataset_selector.clear()
         self.dataset_selector.addItem("-- Select dataset --")
         self.dataset_selector.addItems(folders)
         self.dataset_selector.blockSignals(False)
 
+        self.eval_dataset_selector.blockSignals(True)
+        self.eval_dataset_selector.clear()
+        self.eval_dataset_selector.addItem("-- Select dataset --")
+        self.eval_dataset_selector.addItems(folders)
+        self.eval_dataset_selector.blockSignals(False)
+
+        self.lig_selector.clear()
+        self.lig_selector.addItem("-- Select LIG folder --")
+
+        self.update_lig_selector(self.eval_dataset_selector.currentText())
+        self.display_lig_results(self.lig_selector.currentText())
 
 
     def open_evaluation_log(self):
@@ -648,8 +658,16 @@ class RepairToolGUI(QWidget):
             if os.path.isdir(os.path.join(base_path, name))
         ])
 
+    def _clear_repair_fields(self):
+        for f in (self.input_net,
+                  self.input_log,
+                  self.input_igs,
+                  self.input_lig):
+            f.line_edit.clear()
+
     def update_result_selector(self, dataset_name):
         if dataset_name.startswith("--"):
+            self._clear_repair_fields()
             return
 
         folder = os.path.join("experiments", dataset_name)
@@ -667,42 +685,6 @@ class RepairToolGUI(QWidget):
                 self.input_igs.line_edit.setText(os.path.join(folder, g_file))
 
 
-    def show_results(self):
-        dataset = self.dataset_selector.currentText()
-        output_file = self.output_selector.currentText()
-        if not dataset or not output_file:
-            return
-
-        output_path = os.path.join("experiments", dataset, output_file)
-        try:
-            with open(output_path, "r") as f:
-                text = f.read()
-        except Exception as e:
-            self.show_error(f"It is impossible to read file:\n{str(e)}")
-            return
-
-        dialog = QDialog(self)
-        dialog.setWindowTitle(f"Results: {output_file}")
-        dialog.resize(600, 400)
-        layout = QVBoxLayout(dialog)
-
-        text_area = QTextEdit()
-        text_area.setReadOnly(True)
-        text_area.setText(text)
-        layout.addWidget(text_area)
-
-        match = re.search(r"output_(\d+)", output_file)
-        if match:
-            idx = match.group(1)
-            pnml_file = f"net_repaired_{idx}.pnml"
-            pnml_path = os.path.join("experiments", dataset, pnml_file)
-            if os.path.exists(pnml_path):
-                btn_open = QPushButton(f"Open repaired net ({pnml_file})")
-                btn_open.clicked.connect(lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(pnml_path)))
-                layout.addWidget(btn_open)
-
-        dialog.exec()
-
     def open_lig_editor(self):
         if not self.input_net.is_valid():
             self.show_error("First load a valid Petri net (.pnml)")
@@ -711,7 +693,7 @@ class RepairToolGUI(QWidget):
         dataset = self.dataset_selector.currentText()
 
         if dataset.startswith("--"):
-            dataset = os.path.basename(self.input_net.get_path()).split("_")[0]
+            dataset = os.path.splitext(os.path.basename(self.input_log.get_path()))[0]
 
         dataset_path = os.path.join("experiments", dataset)
         if not os.path.exists(dataset_path):
@@ -721,6 +703,7 @@ class RepairToolGUI(QWidget):
         if editor.exec() == QDialog.Accepted:
             if hasattr(editor, "saved_path") and editor.saved_path:
                 self.input_lig.line_edit.setText(editor.saved_path)
+
 
     def start_repair_worker(self):
         input_data = {
@@ -751,6 +734,7 @@ class RepairToolGUI(QWidget):
 
             self.threadpool.start(worker)
             self.refresh_all_dataset_selectors()
+            self.dataset_selector.setCurrentText(base_name)
 
         except Exception as e:
             self.show_error(f"Repair error: {e}")
@@ -771,11 +755,11 @@ class RepairToolGUI(QWidget):
             if len(field.get_path()) > 300:
                 self.show_error(f"Path too long for: {field.label_text} (limit: 300 characters)")
                 return
-            try:
-                self.validate_lig()
-            except ValueError as e:
-                self.show_error(str(e))
-                return
+        try:
+            self.validate_lig()
+        except ValueError as e:
+            self.show_error(str(e))
+            return
 
         if not self.validate_compatibility():
             return
@@ -797,8 +781,11 @@ class RepairToolGUI(QWidget):
         try:
             self.log("Creating experiment folder...")
             folder_path, base_name = create_experiment_folder_from_xes(
-                'experiments', input_data['log'], input_data['net'],
-                input_data['igs'], input_data['LIG']
+                'experiments',
+                input_data['log'],
+                input_data['net'],
+                input_data['igs'],
+                input_data['LIG']
             )
         except Exception as e:
             self.show_error(f"Creating experiment folder failed: {e}")
@@ -841,25 +828,7 @@ class RepairToolGUI(QWidget):
                     shutil.rmtree(folder_path)
                 return
 
-        """
-        input_data = {
-            'net': self.input_net.get_path(),
-            'log': self.input_log.get_path(),
-            'LIG': self.input_lig.get_path(),
-            'igs': self.input_igs.get_path() or None,
-            'fast_mode': self.fast_mode.isChecked()
-        }
-        """
-
         try:
-            """
-            self.log("Creating experiment folder...")
-            folder_path, base_name = create_experiment_folder_from_xes(
-                'experiments', input_data['log'], input_data['net'],
-                input_data['igs'], input_data['LIG']
-            )
-            """
-
             dataset_name = os.path.basename(os.path.dirname(folder_path))
 
             self._last_dataset = dataset_name
@@ -874,6 +843,8 @@ class RepairToolGUI(QWidget):
 
             self.threadpool.start(worker)
             self.refresh_all_dataset_selectors()
+            self.dataset_selector.setCurrentText(base_name)
+
 
         except KeyError:
             self.log(f"Error: The behavior represented by your LIG is not embedded in any trace")
@@ -891,6 +862,7 @@ class RepairToolGUI(QWidget):
             self.log(f"Error")
             self.show_error(e)
 
+
     def on_repair_finished(self, save_path):
 
         self.refresh_all_dataset_selectors()
@@ -907,16 +879,24 @@ class RepairToolGUI(QWidget):
         self.display_lig_results(lig_folder)
         self.tabs.setCurrentWidget(self.eval_tab)
 
+        self.dataset_selector.setCurrentText(lig_folder)
 
 
-    def on_repair_error(self, exc: Exception):
-        if isinstance(exc, KeyError):
-            self.show_error("The behavior represented by your LIG is not embedded in any trace")
-        elif isinstance(exc, ValueError):
-            self.show_error("The behavior represented by your LIG is already represented by the model")
+
+
+
+    def on_repair_error(self, err):
+        if isinstance(err, Exception):
+            if isinstance(err, KeyError):
+                msg = "The behavior represented by your LIG is not embedded in any trace"
+            elif isinstance(err, ValueError):
+                msg = "The behavior represented by your LIG is already represented by the model"
+            else:
+                msg = str(err)
         else:
-            self.show_error(str(exc))
+            msg = str(err)
 
+        self.show_error(msg)
 
     def validate_lig(self) -> bool:
         lig_path = self.input_lig.get_path()
