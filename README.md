@@ -15,11 +15,10 @@ To run our application you need to have installed:
 * [Java 8](https://www.oracle.com/it/java/technologies/javase/javase8-archive-downloads.html)
 
 * [MySQL](https://dev.mysql.com/downloads/file/?id=537130)
+
+* [Graphviz](https://graphviz.org/download/)
   
 * A set of packages that you can configure inside an environment by using the [requirements.txt](https://github.com/KDMG/ReLIGn-tool/edit/main/requirements.txt) file
-
-* *Optional*: Note that the tool has been tested on MacOS X, therefore, if you are working on another operating system, you may need to recompile the files located in the [`subdue_files`](https://github.com/KDMG/ReLIGn-tool/tree/main/subdue_files) directory by following the instructions at this [link](https://github.com/gromgull/subdue/tree/master).
-
 
 ### Reproduce results
 To run our program copy and paste the following command in your terminal:
