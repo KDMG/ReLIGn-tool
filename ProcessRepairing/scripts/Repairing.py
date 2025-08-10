@@ -594,7 +594,8 @@ RETURN: -text: the alignment
 
 def search_alignment(pattern, dict_trace, graph, dataset):
     if not os.path.isfile(os.path.join(pattern, "alignment.csv")):
-        cmd = ['java', "-jar", os.path.join('BIGfiles', 'ComputePrecision.jar'), pattern + dataset + '.xes', pattern + dataset + '_petriNet.pnml']
+        cmd = ['java', "-jar", os.path.join('BIGfiles', 'ComputePrecision.jar'), os.path.join(pattern, dataset + '.xes'),
+               os.path.join(pattern, dataset + '_petriNet.pnml')]
         try:
             subprocess.run(cmd, capture_output=True, text=True, check=True)
         except subprocess.CalledProcessError as e:

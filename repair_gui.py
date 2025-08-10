@@ -291,9 +291,10 @@ class RepairToolGUI(QWidget):
         screen = QApplication.primaryScreen()
         size = screen.size()
         width = int(size.width() * 0.5)
-        height = int(size.height() * 0.8)
-        self.resize(width, height)
-        self.setMaximumSize(width, height)
+        width_min = int(size.width() * 0.6)
+        height = int(size.height() * 0.92)
+        self.setMinimumSize(width, height)
+        self.setMaximumSize(width_min, height)
         self.threadpool = QThreadPool()
         self.setup_ui()
 

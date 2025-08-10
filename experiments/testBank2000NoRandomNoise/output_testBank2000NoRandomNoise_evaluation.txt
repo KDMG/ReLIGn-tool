@@ -1,0 +1,4 @@
+Fitness:  {'percFitTraces': 0.0, 'averageFitness': 0.8511988654167434, 'percentage_of_fitting_traces': 0.0, 'average_trace_fitness': 0.8511988654167434, 'log_fitness': 0.850315654027102}
+Precision:  0.9364839758476544
+Generalization:  0.9676365958121098
+Simplicity:  0.7575757575757577
