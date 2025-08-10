@@ -1,8 +1,0 @@
-Fast mode: False
-Number of graphs in which the sub occurs: 604
-Graph Selected:  graph2  Matching Cost:  0.0
-
-Evaluation initial net:
-Subgraph:  ['Instance', '1:', 'v', '1', 'SRP', 'v', '2', 'FRPP', 'd', '1', '2', 'SRP__FRPP', 'Found', '1', 'instances.']
-Initial sub:  ['SRP', 'FRPP']
-Trace:  trace_1
