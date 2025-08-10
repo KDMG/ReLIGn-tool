@@ -286,8 +286,14 @@ class RepairToolGUI(QWidget):
         fast_mode_help = QToolButton()
         fast_mode_help.setIcon(QIcon(os.path.join("icons", "information.png")))
         fast_mode_help.setToolTip("This tool implements repairing as explained in ")
-        self.setMinimumSize(750, 890)
-        self.setMaximumSize(950, 900)
+        # self.setMinimumSize(750, 890)
+        # self.setMaximumSize(950, 900)
+        screen = QApplication.primaryScreen()
+        size = screen.size()
+        width = int(size.width() * 0.5)
+        height = int(size.height() * 0.8)
+        self.resize(width, height)
+        self.setMaximumSize(width, height)
         self.threadpool = QThreadPool()
         self.setup_ui()
 
@@ -880,8 +886,6 @@ class RepairToolGUI(QWidget):
         self.tabs.setCurrentWidget(self.eval_tab)
 
         self.dataset_selector.setCurrentText(lig_folder)
-
-
 
 
 
