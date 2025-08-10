@@ -8,19 +8,31 @@ This project provides a tool for process Model Repairing supported by Local Inst
 A demonstration of the tool is available at this [link](https://www.youtube.com/watch?v=aWa0YlJp1wA) 
 
 
-### Requirements
+## Requirements
 To run our application you need to have installed:
 * [Python 3.9.6](https://www.python.org/downloads/release/python-396/)
-  
-* [Java 8](https://www.oracle.com/it/java/technologies/javase/javase8-archive-downloads.html)
-
-* [MySQL](https://dev.mysql.com/downloads/file/?id=537130)
 
 * [Graphviz](https://graphviz.org/download/)
-  
+
 * A set of packages that you can configure inside an environment by using the [requirements.txt](https://github.com/KDMG/ReLIGn-tool/edit/main/requirements.txt) file
 
-### Reproduce results
+### Optional (only required to generate Instance Graphs)
+* [Java 8](https://www.oracle.com/it/java/technologies/javase/javase8-archive-downloads.html): make sure the correct Java 8 version is in your `PATH` (`java -version` should show `1.8.x`).
+
+* [MySQL](https://dev.mysql.com/downloads/file/?id=537130): must be configured so that the `root` user can connect **with no password**.
+#### Important notes for MariaDB users
+
+If you use **MariaDB** instead of MySQL:
+
+1. Edit the configuration file (usually `/etc/mysql/mariadb.conf.d/50-server.cnf` on Linux).
+2. Under the `[mysqld]` section, set:
+   ```ini
+   lower_case_table_names=1
+3. Restart MariaDB:
+   ```ini
+   sudo systemctl restart mariadb
+
+## Reproduce results
 To run our program copy and paste the following command in your terminal:
 ```
 https://github.com/KDMG/ReLIGn-tool/
@@ -30,7 +42,7 @@ python repair_gui.py
 ```
 In the [`data`](https://github.com/KDMG/ReLIGn-tool/tree/main/data) folder you can find some data to test the tool.
 
-### Contributors
+## Contributors
 | Contributor name | Contacts |
 | :-------- | :------- | 
 | `Claudia Diamantini`     | c.diamantini@univpm.it | 
