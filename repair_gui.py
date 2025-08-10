@@ -350,9 +350,9 @@ class RepairToolGUI(QWidget):
         main_layout.setContentsMargins(20, 20, 20, 20)
         main_layout.setSpacing(15)
 
-        title = QLabel("")
-        title.setStyleSheet("font-size: 18pt; font-weight: bold;")
-        main_layout.addWidget(title, alignment=Qt.AlignHCenter)
+        # title = QLabel("")
+        # title.setStyleSheet("font-size: 18pt; font-weight: bold;")
+        # main_layout.addWidget(title, alignment=Qt.AlignHCenter)
 
         main_layout.addWidget(QLabel("Select Dataset"), alignment=Qt.AlignTop)
 
@@ -361,7 +361,7 @@ class RepairToolGUI(QWidget):
         self.dataset_selector.addItem("-- Select dataset --")
         self.dataset_selector.addItems(self.get_experiment_folders())
         self.dataset_selector.currentTextChanged.connect(self.update_result_selector)
-        dataset_layout.addWidget(self.dataset_selector)
+        dataset_layout.addWidget(self.dataset_selector, alignment=Qt.AlignTop)
         main_layout.addLayout(dataset_layout)
 
         input_group = QGroupBox("Input Files")
@@ -401,6 +401,8 @@ class RepairToolGUI(QWidget):
         run_btn.setStyleSheet("padding: 8px 20px; font-weight: bold;")
         main_layout.addWidget(run_btn, alignment=Qt.AlignHCenter)
         run_btn.clicked.connect(self.run_repair)
+        main_layout.addStretch()
+
 
 
     def setup_eval_tab_ui(self, tab):
