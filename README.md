@@ -38,7 +38,7 @@ To run our program copy and paste the following command in your terminal:
 https://github.com/KDMG/ReLIGn-tool/
 cd ReLIGn-tool
 
-python repair_gui.py
+python ReLIGn.py
 ```
 In the [`data`](https://github.com/KDMG/ReLIGn-tool/tree/main/data) folder you can find some data to test the tool.
 
