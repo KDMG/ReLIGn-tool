@@ -85,6 +85,7 @@ def run_repairing(input_data, folder_path, base_name):
         raise e
 
 
+"""
 def run_cmd_stream_sync(cmd: list[str], logger, cancel_event=None):
     with subprocess.Popen(
         cmd,
@@ -106,6 +107,66 @@ def run_cmd_stream_sync(cmd: list[str], logger, cancel_event=None):
         ret = p.wait()
         if ret != 0:
             raise subprocess.CalledProcessError(ret, cmd)
+"""
+
+def run_cmd_stream_sync(cmd: list[str], logger, cancel_event=None):
+    is_windows = (os.name == "nt")
+
+    popen_kwargs = dict(
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        bufsize=1,
+    )
+
+    if is_windows:
+        popen_kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
+    else:
+        popen_kwargs["start_new_session"] = True
+
+    with subprocess.Popen(cmd, **popen_kwargs) as p:
+        try:
+            for line in iter(p.stdout.readline, ''):
+                if cancel_event is not None and cancel_event.is_set():
+                    if is_windows:
+                        try:
+                            p.send_signal(signal.CTRL_BREAK_EVENT)
+                            p.wait(timeout=3)
+                        except Exception:
+                            try:
+                                subprocess.run(
+                                    ["taskkill", "/PID", str(p.pid), "/T", "/F"],
+                                    stdout=subprocess.DEVNULL,
+                                    stderr=subprocess.DEVNULL,
+                                    check=False
+                                )
+                            except Exception:
+                                pass
+                    else:
+                        # Termina l’intero process group su Unix
+                        os.killpg(p.pid, signal.SIGTERM)
+                        try:
+                            p.wait(timeout=3)
+                        except subprocess.TimeoutExpired:
+                            os.killpg(p.pid, signal.SIGKILL)
+
+                    raise CancelledByUser("BIG cancelled by user")
+
+                logger.write(line)
+
+            ret = p.wait()
+            if ret != 0:
+                raise subprocess.CalledProcessError(ret, cmd)
+
+        finally:
+            if p.poll() is None:
+                try:
+                    if is_windows:
+                        p.terminate()
+                    else:
+                        os.killpg(p.pid, signal.SIGTERM)
+                except Exception:
+                    pass
 
 def call_big(log_path, model_path, db_name, out_g_file,
              conformance_path, graph_path, logger, cancel_event=None):
