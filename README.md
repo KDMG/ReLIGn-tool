@@ -1,6 +1,6 @@
 # ReLIGn-tool
 <p align="center">
-  <img src="icons/logo.png" alt="Diagram" width="300"/>
+  <img src="src/resources/logo.png" alt="Diagram" width="300"/>
 </p>
 
 
