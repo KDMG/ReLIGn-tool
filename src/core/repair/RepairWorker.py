@@ -1,4 +1,5 @@
 import sys, json, traceback, os, shutil, signal, atexit
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../..')))
 from src.core.utils import run_repairing, get_next_lig_filename
 
 DONE_MARK = "__REPAIR_DONE__:"
