@@ -23,7 +23,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QUrl, QEvent, QProcess
 from PySide6.QtGui import QDesktopServices
 
-from src.core.utils import (call_big, run_repairing, create_experiment_folder_from_xes, CancelledByUser,
+from src.core.utils import (call_big, create_experiment_folder_from_xes, CancelledByUser,
                                          compute_precision)
 from pm4py.objects.log.importer.xes import importer as xes_importer
 from pm4py.objects.petri_net.importer import importer as pnml_importer
@@ -80,9 +80,8 @@ class BigWorker(QRunnable):
             folder = os.path.abspath(os.path.dirname(self.out_g_file))
             net_p = os.path.abspath(os.path.join(folder, self.db_name + '_petriNet.pnml'))
             log_p = os.path.join(folder, self.db_name + '.xes')
-            if 'alignment.csv' not in os.listdir(self.conformance_path):
-                compute_precision(net_p, log_p, logger=self.logger, cancel_event=self.cancel_event)
-                shutil.copyfile(os.path.join(folder, 'alignment.csv'),
+            compute_precision(net_p, log_p, logger=self.logger, cancel_event=self.cancel_event)
+            shutil.copyfile(os.path.join(folder, 'alignment.csv'),
                                 os.path.join(self.conformance_path, 'alignment.csv'))
             if 'Conformance' not in os.listdir(os.path.dirname(self.conformance_path)):
                 os.makedirs(os.path.join(os.path.dirname(self.conformance_path), 'Conformance'))
@@ -193,40 +192,6 @@ class AdaptiveGraphLabel(QLabel):
 class WorkerSignals(QObject):
     finished = Signal(str)
     error    = Signal(object)
-
-class RepairWorker(QRunnable):
-    def __init__(self, input_data, folder_path, base_name, logger):
-        super().__init__()
-        self.input_data  = input_data
-        self.folder_path = folder_path
-        self.base_name   = base_name
-        self.logger      = logger
-        self.signals     = WorkerSignals()
-
-    @Slot()
-    def run(self):
-        import sys, traceback
-        original_stdout = sys.stdout
-        sys.stdout = self.logger
-
-        try:
-            print("Starting repair...", flush=True)
-            save_path = run_repairing(
-                self.input_data, self.folder_path, self.base_name
-            )
-            print(f"Repair completed!", flush=True)
-            self.signals.finished.emit(save_path)
-
-        except KeyError:
-            self.signals.error.emit("The behavior represented by your LIG is not embedded in any trace")
-        except IndexError:
-            self.signals.error.emit("The behavior represented by your LIG is already represented by the model")
-        except ValueError:
-            self.signals.error.emit("The behavior represented by your LIG is already represented by the model")
-        except Exception as e:
-            self.signals.error.emit(e)
-        finally:
-            sys.stdout = original_stdout
 
 
 class FileInputField(QWidget):
@@ -701,15 +666,7 @@ class RepairToolGUI(QWidget):
 
 
         folder_path = os.path.join("experiments", dataset, lig_folder)
-        if lig_folder != '' and not lig_folder.__contains__('--'):
-            eval_repaired = os.path.join(folder_path, f"output_{lig_folder}_evaluation.txt")
-            if os.path.exists(eval_repaired):
-                html_rep = self._parse_metrics_file(eval_repaired or '')
-                self.metrics_text.setHtml(html_rep)
-            else:
-                self.metrics_text.clear()
-        else:
-            return
+
         if dataset != '' and not dataset.__contains__('--'):
             eval_original = os.path.join("experiments", dataset, f"output_{dataset}_evaluation.txt")
             if os.path.exists(eval_original):
@@ -717,6 +674,16 @@ class RepairToolGUI(QWidget):
                 self.metrics_text_original.setHtml(html_org)
             else:
                 self.metrics_text_original.clear()
+        else:
+            return
+
+        if l != '' and not l.__contains__('--'):
+            eval_repaired = os.path.join("experiments", dataset, l, f"output_{l}_evaluation.txt")
+            if os.path.exists(eval_repaired):
+                html_rep = self._parse_metrics_file(eval_repaired or '')
+                self.metrics_text.setHtml(html_rep)
+            else:
+                self.metrics_text.clear()
         else:
             return
 

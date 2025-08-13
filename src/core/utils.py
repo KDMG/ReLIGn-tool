@@ -1,40 +1,12 @@
-import re
 import signal
 import subprocess
-import threading
 from os.path import join as join
 from sys import stdout
-
-from src.core.repair import Repairing as repairing
 import os
-import hashlib
 import shutil
 
 class CancelledByUser(Exception):
     pass
-
-
-def get_hash_from_files(file_paths):
-    hasher = hashlib.sha256()
-    for path in sorted(file_paths):
-        with open(path, 'rb') as f:
-            while chunk := f.read(8192):
-                hasher.update(chunk)
-    return hasher.hexdigest()[:7]
-
-def get_next_lig_filename(folder_path):
-    pattern = re.compile(r"lig_(\d+)$")
-    max_index = 0
-
-    for filename in os.listdir(folder_path):
-        match = pattern.match(filename)
-        if match:
-            index = int(match.group(1))
-            if index > max_index:
-                max_index = index
-
-    next_index = max_index + 1
-    return f"lig_{next_index}"
 
 
 def create_experiment_folder_from_xes(base_dir, xes_file, net_file, g_file, lig_file):
@@ -67,22 +39,6 @@ def create_experiment_folder_from_xes(base_dir, xes_file, net_file, g_file, lig_
     return folder_path, xes_base
 
 
-def run_repairing(input_data, folder_path, base_name):
-
-    new_lig = get_next_lig_filename(folder_path)
-    save_path = os.path.join(folder_path, new_lig)
-    if not os.path.exists(save_path):
-        os.makedirs(save_path)
-    try:
-        shutil.copy(input_data['LIG'], join(folder_path, new_lig, 'lig.g'))
-    except OSError:
-        pass
-    try:
-        repairing.main(input_data, folder_path, base_name, '1', os.path.join(folder_path, new_lig))
-        return save_path
-    except Exception as e:
-        shutil.rmtree(save_path)
-        raise e
 
 
 """
