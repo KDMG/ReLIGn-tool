@@ -20,6 +20,17 @@ To run our application you need to have installed:
 * [Java 8](https://www.oracle.com/it/java/technologies/javase/javase8-archive-downloads.html): make sure the correct Java 8 version is in your `PATH` (`java -version` should show `1.8.x`).
 
 * [MySQL](https://dev.mysql.com/downloads/file/?id=537130): must be configured so that the `root` user can connect **with no password**.
+
+#### MySQL Version Requirement
+This project requires the `mysql_native_password` authentication plugin.
+- **MySQL 5.7** and **MySQL 8.0.x up to 8.0.34** support the plugin by default.
+- **MySQL 8.4 LTS**: `mysql_native_password` is available but disabled by default.  
+  To enable it, add the following to your `my.cnf` and restart MySQL:
+  ```ini
+  [mysqld]
+  mysql_native_password=ON
+- **MySQL 9.0 and above**: `mysql_native_password` has been removed and is not supported.
+
 #### Important notes for MariaDB users
 
 If you use **MariaDB** instead of MySQL:
