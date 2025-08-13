@@ -1,9 +1,42 @@
 import sys, json, traceback, os, shutil, signal, atexit
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.join('..','..','..','..',))))
-from src.core.utils import run_repairing, get_next_lig_filename
+import re
+import Repairing as repairing
 
 DONE_MARK = "__REPAIR_DONE__:"
 ERR_MARK  = "__REPAIR_ERR__:"
+
+def get_next_lig_filename(folder_path):
+    pattern = re.compile(r"lig_(\d+)$")
+    max_index = 0
+
+    for filename in os.listdir(folder_path):
+        match = pattern.match(filename)
+        if match:
+            index = int(match.group(1))
+            if index > max_index:
+                max_index = index
+
+    next_index = max_index + 1
+    return f"lig_{next_index}"
+
+def run_repairing(input_data, folder_path, base_name):
+
+    new_lig = get_next_lig_filename(folder_path)
+    save_path = os.path.join(folder_path, new_lig)
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
+    try:
+        shutil.copy(input_data['LIG'], os.path.join(folder_path, new_lig, 'lig.g'))
+    except OSError:
+        pass
+    try:
+        repairing.main(input_data, folder_path, base_name, '1', os.path.join(folder_path, new_lig))
+        return save_path
+    except Exception as e:
+        shutil.rmtree(save_path)
+        raise e
+
 
 def main():
     if len(sys.argv) < 2:
