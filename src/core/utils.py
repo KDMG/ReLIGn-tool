@@ -15,27 +15,25 @@ def create_experiment_folder_from_xes(base_dir, xes_file, net_file, g_file, lig_
     folder_name = f"{xes_base}"
     folder_path = os.path.abspath(os.path.join(base_dir, folder_name))
 
-    if (not os.path.exists(join(folder_path, folder_name+'.xes')) or not os.path.exists(join(folder_path, xes_base + '_petriNet.pnml'))
-            or os.path.exists(join(folder_path, xes_base + '.g')) or os.path.exists(join(folder_path, 'lig.g'))):
-        if not os.path.exists(folder_path):
-            os.makedirs(folder_path)
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
+    try:
+        shutil.copy(xes_file, join(folder_path, folder_name+'.xes'))
+    except OSError:
+        pass
+    try:
+        shutil.copy(net_file, join(folder_path, xes_base + '_petriNet.pnml'))
+    except OSError:
+        pass
+    if g_file:
         try:
-            shutil.copy(xes_file, join(folder_path, folder_name+'.xes'))
+            shutil.copy(g_file, join(folder_path, xes_base + '.g'))
         except OSError:
             pass
-        try:
-            shutil.copy(net_file, join(folder_path, xes_base + '_petriNet.pnml'))
-        except OSError:
-            pass
-        if g_file:
-            try:
-                shutil.copy(g_file, join(folder_path, xes_base + '.g'))
-            except OSError:
-                pass
-        try:
-            shutil.copy(lig_file, join(folder_path, 'subelements.txt'))
-        except OSError:
-            pass
+    try:
+        shutil.copy(lig_file, join(folder_path, 'subelements.txt'))
+    except OSError:
+        pass
     return folder_path, xes_base
 
 

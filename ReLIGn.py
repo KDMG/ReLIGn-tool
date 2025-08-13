@@ -363,6 +363,8 @@ class RepairToolGUI(QWidget):
         self.log_box.setLineWrapMode(QtWidgets.QPlainTextEdit.NoWrap)
         self.log_box.setMaximumBlockCount(2000)
         self.log_box.setUndoRedoEnabled(False)
+        self.log_box.setLineWrapMode(QtWidgets.QPlainTextEdit.WidgetWidth)
+        self.log_box.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
 
         main_layout.addWidget(self.log_box)
 
