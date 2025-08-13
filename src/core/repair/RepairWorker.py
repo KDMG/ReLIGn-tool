@@ -1,5 +1,4 @@
 import sys, json, traceback, os, shutil, signal, atexit
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.join('..','..','..','..',))))
 import re
 import Repairing as repairing
 
