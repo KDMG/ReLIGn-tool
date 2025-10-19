@@ -46,7 +46,7 @@ If you use **MariaDB** instead of MySQL:
 ## Reproduce results
 To run our program copy and paste the following command in your terminal:
 ```
-https://github.com/KDMG/ReLIGn-tool/
+git clone https://github.com/KDMG/ReLIGn-tool/
 cd ReLIGn-tool
 
 python ReLIGn.py
@@ -58,6 +58,6 @@ In the [`data`](https://github.com/KDMG/ReLIGn-tool/tree/main/data) folder you c
 | :-------- | :------- | 
 | `Claudia Diamantini`     | c.diamantini@univpm.it | 
 | `Laura Genga`            | l.genga@tue.nl         | 
-| `Gobbi Chiara`           | c.gobbi@pm.univpm.it   | 
+| `Chiara Gobbi`           | c.gobbi@pm.univpm.it   | 
 | `Alessandro Mele`        | a.mele@pm.univpm.it    | 
 | `Domenico Potena`        | d.potena@pm.univpm.it  | 
